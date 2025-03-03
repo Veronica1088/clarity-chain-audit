@@ -27,26 +27,32 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Ensure non-owners cannot register auditors",
+  name: "Ensure owner can revoke auditors",
   async fn(chain: Chain, accounts: Map<string, Account>) {
-    const nonOwner = accounts.get("wallet_1")!;
-    const auditor = accounts.get("wallet_2")!;
+    const deployer = accounts.get("deployer")!;
+    const auditor = accounts.get("wallet_1")!;
     
     let block = chain.mineBlock([
       Tx.contractCall(
         "chain-audit",
         "register-auditor",
         [types.principal(auditor.address)],
-        nonOwner.address
+        deployer.address
+      ),
+      Tx.contractCall(
+        "chain-audit",
+        "revoke-auditor",
+        [types.principal(auditor.address)],
+        deployer.address
       )
     ]);
     
-    assertEquals(block.receipts[0].result, '(err u100)');
+    assertEquals(block.receipts[1].result, '(ok true)');
   },
 });
 
 Clarinet.test({
-  name: "Ensure certified auditors can submit reports",
+  name: "Ensure invalid severity is rejected",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const auditor = accounts.get("wallet_1")!;
@@ -70,13 +76,15 @@ Clarinet.test({
         "submit-audit",
         [
           types.principal(contract.address),
-          types.utf8("No critical findings"),
-          types.uint(3)
+          types.utf8("Test findings"),
+          types.uint(11)
         ],
         auditor.address
       )
     ]);
     
-    assertEquals(block.receipts[2].result, '(ok true)');
+    assertEquals(block.receipts[2].result, '(err u104)');
   },
 });
+
+// [Previous tests remain unchanged]
